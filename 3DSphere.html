@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Shop Bubbles</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+<script>
+    // Set up scene, camera, and renderer
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Create the outer sphere (globe)
+    const outerGeometry = new THREE.SphereGeometry(5, 32, 32);
+    const outerMaterial = new THREE.MeshBasicMaterial({
+        color: 0x000000,
+        wireframe: true,
+        wireframeLineWidth: 0.05, // Set the wireframe size as per your wish
+        wireframeLinejoin: 'round'
+    });
+    const outerGlobe = new THREE.Mesh(outerGeometry, outerMaterial);
+    scene.add(outerGlobe);
+
+    // Create red points on the outer globe
+    const outerPoints = new THREE.Group();
+    for (let i = 0; i < 10000; i++) {
+        const pointGeometry = new THREE.SphereGeometry(0.03);
+        const pointMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const point = new THREE.Mesh(pointGeometry, pointMaterial);
+        setPointPosition(point);
+        outerPoints.add(point);
+    }
+    outerGlobe.add(outerPoints);
+
+    // Create the inner sphere
+    const innerGeometry = new THREE.SphereGeometry(4, 32, 32);
+    const innerMaterial = new THREE.MeshBasicMaterial({
+        color: 0x000000,
+        wireframe: true,
+        wireframeLineWidth: 0.1, // Set the wireframe size as per your wish
+        wireframeLinejoin: 'round'
+    });
+    const innerGlobe = new THREE.Mesh(innerGeometry, innerMaterial);
+    scene.add(innerGlobe);
+
+    // Create green points on the inner globe
+    const innerPoints = new THREE.Group();
+    for (let i = 0; i < 8000; i++) {
+        const pointGeometry = new THREE.SphereGeometry(0.02);
+        const pointMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const point = new THREE.Mesh(pointGeometry, pointMaterial);
+        setPointPosition(point);
+        innerPoints.add(point);
+    }
+    innerGlobe.add(innerPoints);
+
+    // Set random positions for each point on the globe
+    function setPointPosition(point) {
+        const latitude = Math.random() * Math.PI - Math.PI / 2;
+        const longitude = Math.random() * 2 * Math.PI - Math.PI;
+        const radius = 5;
+
+        const x = radius * Math.cos(latitude) * Math.cos(longitude);
+        const y = radius * Math.sin(latitude);
+        const z = radius * Math.cos(latitude) * Math.sin(longitude);
+
+        point.position.set(x, y, z);
+    }
+
+    // Set camera position
+    camera.position.z = 15;
+
+    let hovering = false;
+
+    // Add event listener for mouse move
+    document.addEventListener('mousemove', onDocumentMouseMove);
+
+    function onDocumentMouseMove(event) {
+        const mouse = new THREE.Vector2();
+        const raycaster = new THREE.Raycaster();
+
+        // Normalize mouse coordinates
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+        // Raycast from the camera
+        raycaster.setFromCamera(mouse, camera);
+
+        // Check intersections with outer points
+        const outerIntersects = raycaster.intersectObjects(outerPoints.children);
+
+        if (outerIntersects.length > 0) {
+            if (!hovering) {
+                // Burst the points when the cursor hovers over them
+                burstPoints(outerPoints);
+                hovering = true;
+            }
+        } else {
+            if (hovering) {
+                // Return points to original position when hover is removed
+                returnToOriginalPosition(outerPoints);
+                hovering = false;
+            }
+        }
+
+        // Check intersections with inner points
+        const innerIntersects = raycaster.intersectObjects(innerPoints.children);
+
+        if (innerIntersects.length > 0) {
+            if (!hovering) {
+                // Burst the points when the cursor hovers over them
+                burstPoints(innerPoints);
+                hovering = true;
+            }
+        } else {
+            if (hovering) {
+                // Return points to original position when hover is removed
+                returnToOriginalPosition(innerPoints);
+                hovering = false;
+            }
+        }
+    }
+
+    // Burst the points in the group
+    function burstPoints(group) {
+        group.children.forEach(point => {
+            point.position.set(
+                Math.random() * 20 - 10,
+                Math.random() * 20 - 10,
+                Math.random() * 20 - 10
+            );
+        });
+    }
+
+    // Return points to original position
+    function returnToOriginalPosition(group) {
+        group.children.forEach(point => {
+            setPointPosition(point);
+        });
+    }
+
+    // Add animation
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Rotate the outer globe
+        outerGlobe.rotation.y += 0.005;
+
+        // Rotate the inner globe
+        innerGlobe.rotation.y -= 0.005;
+
+        renderer.render(scene, camera);
+    }
+
+    animate();
+</script>
+
+</body>
+</html>
